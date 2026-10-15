@@ -11,6 +11,8 @@
  * @module dsh-protect-generated-files
  */
 import { createHash } from 'node:crypto'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
@@ -85,14 +87,21 @@ export function apply(ctx: Context, config: Config): void {
     pending.add(key)
     if (pending.size > 200) pending.delete(pending.values().next().value!)
   }
-  const options = { extraGlobs: config.extraGlobs, ignore: config.ignore, defaultGlobs: config.defaultGlobs, headerLines: config.headerLines }
+  const MANIFESTS = ['package.json', 'Cargo.toml', 'go.mod', 'composer.json', 'Gemfile', 'pyproject.toml', 'setup.py', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'deno.json', 'mix.exs', 'pubspec.yaml']
+  const optionsFor = (workspace: string) => ({
+    extraGlobs: config.extraGlobs,
+    ignore: config.ignore,
+    defaultGlobs: config.defaultGlobs,
+    headerLines: config.headerLines,
+    isProjectRoot: (dir: string) => dir === '' || MANIFESTS.some(m => existsSync(join(workspace, dir, m))),
+  })
   const shellTools = new Set(config.shellTools)
 
   const check = async (path: string, workspace: string): Promise<{ relative: string; info: GeneratedInfo } | undefined> => {
     const { absolute, relative } = resolvePath(path, workspace)
     if (relative.startsWith('../') && !relative.includes('node_modules/')) return undefined
     const content = await readExisting(absolute, config.maxFileBytes)
-    const info = generatedInfo(relative, content, options)
+    const info = generatedInfo(relative, content, optionsFor(workspace))
     return info === undefined ? undefined : { relative, info }
   }
 
