@@ -19,6 +19,18 @@ dsh plugin --profile tui add dsh-protect-generated-files
 
 Replace `tui` with the profile you run. It's active right after installing. Remove it with `dsh plugin --profile tui remove dsh-protect-generated-files`.
 
+### From a clone
+
+Before the package is on npm, or to try local changes, build a tarball and install that:
+
+```sh
+git clone https://github.com/acus9345/dsh-protect-generated-files
+cd dsh-protect-generated-files
+npm install
+npm pack
+dsh plugin --profile tui add ./dsh-protect-generated-files-0.1.0.tgz
+```
+
 ## How it decides a file is generated
 
 There are three ways a file gets flagged.
@@ -65,4 +77,4 @@ npm run test:e2e   # real dsh runs against a scripted local model, no API key ne
 
 The install test runs `dsh plugin add`, which needs `pnpm` on your PATH.
 
-MIT licensed.
+MIT licensed. Written by [acus9345](https://github.com/acus9345). Bug reports and ideas are welcome in the issues.
