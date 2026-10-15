@@ -50,7 +50,7 @@ export const Config: Schema<Config> = Schema.object({
   headerLines: Schema.natural().min(1).default(15),
   allowIdenticalRetry: Schema.boolean().default(true),
   guardShell: Schema.boolean().default(true),
-  shellTools: Schema.array(Schema.string()).default(['bash']),
+  shellTools: Schema.array(Schema.string()).default(['bash', 'pwsh']),
   maxFileBytes: Schema.natural().default(5_000_000),
 }) as Schema<Config>
 
@@ -78,7 +78,14 @@ export function shellEditTargets(command: string): string[] {
   }
   for (const m of command.matchAll(/(?:^|[^>&\d])>{1,2}\s*([^\s;&|<>]+)/g)) out.push(m[1]!)
   for (const m of command.matchAll(/\btee\s+(?:-a\s+)?([^\s;&|]+)/g)) out.push(m[1]!)
-  return out.filter(p => p !== '/dev/null' && !p.startsWith('&'))
+  // PowerShell: Set-Content / Add-Content / Out-File / Tee-Object, with -Path/-FilePath or a first positional path.
+  for (const m of command.matchAll(/(?:^|[;&|]\s*|\|\s*)(?:set-content|add-content|out-file|tee-object|sc|ac)\b([^;&|\n]*)/gi)) {
+    const words = m[1]!.match(/'[^']*'|"[^"]*"|\S+/g) ?? []
+    const named = words.findIndex(w => /^-(?:path|filepath|literalpath)$/i.test(w))
+    const target = named !== -1 ? words[named + 1] : words.find(w => !w.startsWith('-'))
+    if (target !== undefined) out.push(target.replace(/^['"]|['"]$/g, ''))
+  }
+  return out.filter(p => p !== '/dev/null' && !/^\$null$/i.test(p) && !p.startsWith('&')).map(p => p.replaceAll('\\', '/'))
 }
 
 export function apply(ctx: Context, config: Config): void {

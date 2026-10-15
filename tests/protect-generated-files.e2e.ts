@@ -50,3 +50,16 @@ test('works when installed with `dsh plugin add`', async () => {
   assert.equal(run.exitCode, 0, run.stderr)
   assert.match(run.toolResults[1]!.result, /protect-generated-files blocked this edit/)
 })
+
+test('guards the pwsh tool too (the shell DSH uses on Windows)', async () => {
+  const run = await runDsh({
+    plugins: [plugin],
+    homePatch: '- id: tool-pwsh\n  disabled: false\n- id: tool-bash\n  disabled: true\n',
+    files: { 'pnpm-lock.yaml': 'lockfileVersion: 9.0\n' },
+    readAfter: ['pnpm-lock.yaml'],
+    script: [{ tool: 'pwsh', input: { description: 'Patch lockfile', command: "(Get-Content pnpm-lock.yaml) -replace '9.0','6.0' | Set-Content pnpm-lock.yaml" } }],
+  })
+  assert.equal(run.exitCode, 0, run.stderr)
+  assert.match(run.toolResults[0]!.result, /protect-generated-files blocked/)
+  assert.equal(run.filesAfter['pnpm-lock.yaml'], 'lockfileVersion: 9.0\n')
+})
