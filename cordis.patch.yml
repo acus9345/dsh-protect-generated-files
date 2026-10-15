@@ -1,0 +1,13 @@
+# dsh-protect-generated-files: no hand edits to lockfiles and generated code.
+# Override by restating this row's whole `config` in a later layer:
+#
+# - id: protect-generated-files
+#   config:
+#     mode: deny                         # or ask
+#     extraGlobs: { 'src/api/client/**': 'edit openapi.yaml and run npm run gen:api' }
+#     ignore: ['vendor/**']              # never treat these as generated
+#     defaultGlobs: true
+#     guardShell: true
+- insert:
+    - id: protect-generated-files
+      name: dsh-protect-generated-files
