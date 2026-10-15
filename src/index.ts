@@ -17,7 +17,7 @@ import type { Context } from '@deepseek-ai/cordis'
 import Schema from '@deepseek-ai/schemastery'
 import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
 import { generatedInfo, type GeneratedInfo } from './detect.ts'
-import { fileMutation, readExisting, resolvePath, workspaceOf } from './shared/files.ts'
+import { canonicalJson, fileMutation, readExisting, resolvePath, workspaceOf } from './shared/files.ts'
 
 export { generatedInfo, hintFor, DEFAULT_GENERATED_GLOBS } from './detect.ts'
 export type { GeneratedInfo, GeneratedOptions } from './detect.ts'
@@ -129,7 +129,7 @@ export function apply(ctx: Context, config: Config): void {
       hit = await check(mutation.path, workspace)
     }
     if (hit === undefined) return next()
-    const key = createHash('sha256').update(`${exec.name}\0${workspace}\0${JSON.stringify(exec.arguments)}`).digest('hex')
+    const key = createHash('sha256').update(`${exec.name}\0${workspace}\0${canonicalJson(exec.arguments)}`).digest('hex')
     if (config.allowIdenticalRetry && pending.delete(key)) return next()
     const text = denialText(hit.relative, hit.info, config.allowIdenticalRetry)
     if (config.mode === 'ask') {
