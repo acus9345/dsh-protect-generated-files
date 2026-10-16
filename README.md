@@ -1,6 +1,6 @@
 # dsh-protect-generated-files
 
-English | [中文](README.zh.md)
+English | [中文](README_zh.md)
 
 Agents edit files that nobody should edit by hand. They'll patch a version number straight into `pnpm-lock.yaml`, fix a typo in `user.pb.go`, or "correct" a type in Prisma's generated client. The edit looks fine until the next `pnpm install` or `protoc` run wipes it out, or, worse, leaves the lockfile disagreeing with `package.json` in a way that takes an afternoon to untangle.
 
