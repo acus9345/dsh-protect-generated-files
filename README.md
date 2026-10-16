@@ -1,5 +1,7 @@
 # dsh-protect-generated-files
 
+English | [中文](README.zh.md)
+
 Agents edit files that nobody should edit by hand. They'll patch a version number straight into `pnpm-lock.yaml`, fix a typo in `user.pb.go`, or "correct" a type in Prisma's generated client. The edit looks fine until the next `pnpm install` or `protoc` run wipes it out, or, worse, leaves the lockfile disagreeing with `package.json` in a way that takes an afternoon to untangle.
 
 This [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) plugin refuses `write` and `edit` calls on generated files and lockfiles. It also refuses in-place shell edits of them (`sed -i`, `perl -pi`, `> file`, `tee file`). Instead of a bare "no", the model is told how the file is supposed to change:
@@ -21,14 +23,14 @@ That's the `web` profile, the browser UI you start with `dsh web`. If you run DS
 
 ### From a clone
 
-Before the package is on npm, or to try local changes, build a tarball and install that:
+To try local changes, build a tarball and install that:
 
 ```sh
 git clone https://github.com/acus9345/dsh-protect-generated-files
 cd dsh-protect-generated-files
 npm install
 npm pack
-dsh plugin --profile web add ./dsh-protect-generated-files-0.1.0.tgz
+dsh plugin --profile web add ./dsh-protect-generated-files-0.2.0.tgz
 ```
 
 ## How it decides a file is generated
