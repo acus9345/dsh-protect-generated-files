@@ -1,6 +1,6 @@
 {
   "name": "dsh-protect-generated-files",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "DeepSeek Harness plugin that stops hand edits to generated files (lockfiles, protobuf/codegen output, files marked @generated or DO NOT EDIT) and tells the model which source to edit and what to run instead.",
   "license": "MIT",
   "author": "acus9345",
