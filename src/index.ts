@@ -18,6 +18,7 @@ import Schema from '@deepseek-ai/schemastery'
 import type { PreToolDecision, ToolExecution } from '@deepseek-ai/dsh-tools'
 import { generatedInfo, type GeneratedInfo } from './detect.ts'
 import { canonicalJson, fileMutation, readExisting, resolvePath, workspaceOf } from './shared/files.ts'
+import { resolveConfig } from './shared/live.ts'
 
 export { generatedInfo, hintFor, DEFAULT_GENERATED_GLOBS } from './detect.ts'
 export type { GeneratedInfo, GeneratedOptions } from './detect.ts'
@@ -42,17 +43,19 @@ export interface Config {
   maxFileBytes: number
 }
 
+// Every field is `.volatile()` so the settings page on DSH's Plugins page can
+// change it live; `apply` reads the current values on each call.
 export const Config: Schema<Config> = Schema.object({
-  mode: Schema.union(['deny', 'ask']).default('deny'),
-  extraGlobs: Schema.dict(Schema.string()).default({}),
-  ignore: Schema.array(Schema.string()).default([]),
-  defaultGlobs: Schema.boolean().default(true),
-  headerLines: Schema.natural().min(1).default(15),
-  allowIdenticalRetry: Schema.boolean().default(true),
-  guardShell: Schema.boolean().default(true),
-  shellTools: Schema.array(Schema.string()).default(['bash', 'pwsh']),
-  maxFileBytes: Schema.natural().default(5_000_000),
-}) as Schema<Config>
+  mode: Schema.union(['deny', 'ask']).default('deny').volatile(),
+  extraGlobs: Schema.dict(Schema.string()).default({}).volatile(),
+  ignore: Schema.array(Schema.string()).default([]).volatile(),
+  defaultGlobs: Schema.boolean().default(true).volatile(),
+  headerLines: Schema.natural().min(1).default(15).volatile(),
+  allowIdenticalRetry: Schema.boolean().default(true).volatile(),
+  guardShell: Schema.boolean().default(true).volatile(),
+  shellTools: Schema.array(Schema.string()).default(['bash', 'pwsh']).volatile(),
+  maxFileBytes: Schema.natural().default(5_000_000).volatile(),
+}) as unknown as Schema<Config>
 
 /**
  * Render the model-facing reason.
@@ -95,47 +98,47 @@ export function apply(ctx: Context, config: Config): void {
     if (pending.size > 200) pending.delete(pending.values().next().value!)
   }
   const MANIFESTS = ['package.json', 'Cargo.toml', 'go.mod', 'composer.json', 'Gemfile', 'pyproject.toml', 'setup.py', 'pom.xml', 'build.gradle', 'build.gradle.kts', 'deno.json', 'mix.exs', 'pubspec.yaml']
-  const optionsFor = (workspace: string) => ({
-    extraGlobs: config.extraGlobs,
-    ignore: config.ignore,
-    defaultGlobs: config.defaultGlobs,
-    headerLines: config.headerLines,
+  const optionsFor = (cfg: Config, workspace: string) => ({
+    extraGlobs: cfg.extraGlobs,
+    ignore: cfg.ignore,
+    defaultGlobs: cfg.defaultGlobs,
+    headerLines: cfg.headerLines,
     isProjectRoot: (dir: string) => dir === '' || MANIFESTS.some(m => existsSync(join(workspace, dir, m))),
   })
-  const shellTools = new Set(config.shellTools)
 
-  const check = async (path: string, workspace: string): Promise<{ relative: string; info: GeneratedInfo } | undefined> => {
+  const check = async (cfg: Config, path: string, workspace: string): Promise<{ relative: string; info: GeneratedInfo } | undefined> => {
     const { absolute, relative } = resolvePath(path, workspace)
     if (relative.startsWith('../') && !relative.includes('node_modules/')) return undefined
-    const content = await readExisting(absolute, config.maxFileBytes)
-    const info = generatedInfo(relative, content, optionsFor(workspace))
+    const content = await readExisting(absolute, cfg.maxFileBytes)
+    const info = generatedInfo(relative, content, optionsFor(cfg, workspace))
     return info === undefined ? undefined : { relative, info }
   }
 
   ctx.on('tools/pre-execute', async (exec: ToolExecution, next: () => Promise<PreToolDecision>) => {
+    const cfg = resolveConfig(config)
     const workspace = workspaceOf(exec)
     let hit: { relative: string; info: GeneratedInfo } | undefined
-    if (shellTools.has(exec.name)) {
-      if (!config.guardShell) return next()
+    if (cfg.shellTools.includes(exec.name)) {
+      if (!cfg.guardShell) return next()
       const command = (exec.arguments as { command?: unknown } | null)?.command
       if (typeof command !== 'string') return next()
       for (const target of shellEditTargets(command)) {
-        hit = await check(target, workspace)
+        hit = await check(cfg, target, workspace)
         if (hit !== undefined) break
       }
     } else {
       const mutation = fileMutation(exec)
       if (mutation === undefined) return next()
-      hit = await check(mutation.path, workspace)
+      hit = await check(cfg, mutation.path, workspace)
     }
     if (hit === undefined) return next()
     const key = createHash('sha256').update(`${exec.name}\0${workspace}\0${canonicalJson(exec.arguments)}`).digest('hex')
-    if (config.allowIdenticalRetry && pending.delete(key)) return next()
-    const text = denialText(hit.relative, hit.info, config.allowIdenticalRetry)
-    if (config.mode === 'ask') {
+    if (cfg.allowIdenticalRetry && pending.delete(key)) return next()
+    const text = denialText(hit.relative, hit.info, cfg.allowIdenticalRetry)
+    if (cfg.mode === 'ask') {
       return { kind: 'ask', reason: text, displayReason: { en: `${hit.relative} is a generated file. ${hit.info.hint}.` } }
     }
-    if (config.allowIdenticalRetry) remember(key)
+    if (cfg.allowIdenticalRetry) remember(key)
     return { kind: 'deny', reason: text }
   })
 }
