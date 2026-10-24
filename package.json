@@ -87,5 +87,12 @@
   "homepage": "https://github.com/acus9345/dsh-protect-generated-files#readme",
   "bugs": {
     "url": "https://github.com/acus9345/dsh-protect-generated-files/issues"
+  },
+  "overrides": {
+    "zod": "^4.6.6",
+    "undici": "^8.12.2",
+    "fflate": "^0.8.3",
+    "@modelcontextprotocol/client": "^2.3.1",
+    "fast-uri": "^3.1.9"
   }
 }
