@@ -30,7 +30,7 @@ git clone https://github.com/acus9345/dsh-protect-generated-files
 cd dsh-protect-generated-files
 npm install
 npm pack
-dsh plugin --profile web add ./dsh-protect-generated-files-0.2.0.tgz
+dsh plugin --profile web add ./dsh-protect-generated-files-0.2.3.tgz
 ```
 
 ## 怎么判断一个文件是生成的
